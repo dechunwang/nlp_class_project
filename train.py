@@ -4,9 +4,9 @@ from model.model import *
 
 
 if __name__ == '__main__':
-    epocs = 65
+    epocs = 200
     #epoc_loss = []
-    batch_size = 256
+    batch_size = 512
     #num_workers = 4
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
@@ -17,13 +17,14 @@ if __name__ == '__main__':
     dataset = ROCloader('dataset/','val',100,20)
     dataloader = torch.utils.data.DataLoader(dataset, batch_size=batch_size, shuffle=True,  num_workers=4)
 
+    print('Total: {}'.format(len(dataset)))
 
     #criterion = torch.nn.CrossEntropyLoss().cuda()
-    optimizer = torch.optim.SGD(model.parameters(), lr=0.001)
+    optimizer = torch.optim.SGD(model.parameters(), lr=0.1)
+    # optimizer = torch.optim.Adagrad(model.parameters(), lr=0.01)
 
 
-
-    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=30, gamma=0.1, last_epoch=-1)
+    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=90, gamma=0.1, last_epoch=-1)
     for epoc in range (1, epocs+1):
         scheduler.step()
         batch_loss = []
@@ -32,16 +33,16 @@ if __name__ == '__main__':
             optimizer.zero_grad()
 
             prefix_input, sufix_input, target = batch
-            prefix_input = prefix_input.to(device)
-            sufix_input = sufix_input.to(device)
-            target = target.to(device)
+            prefix_input = prefix_input.to(device).float()
+            sufix_input = sufix_input.to(device).float()
+            target = target.to(device).long()
 
             loss = model(prefix_input, sufix_input, target)
-
+            print(loss.item())
             loss.backward()
             batch_loss.append(loss.item())
             optimizer.step()
 
 
 
-        print(sum(batch_loss)/len(batch_loss))
+        print(np.array(batch_loss).mean())
