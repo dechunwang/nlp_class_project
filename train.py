@@ -20,11 +20,12 @@ if __name__ == '__main__':
     print('Total: {}'.format(len(dataset)))
 
     #criterion = torch.nn.CrossEntropyLoss().cuda()
-    optimizer = torch.optim.SGD(model.parameters(), lr=0.1)
-    # optimizer = torch.optim.Adagrad(model.parameters(), lr=0.01)
+    # optimizer = torch.optim.SGD(model.parameters(), lr=0.1)
+    optimizer = torch.optim.Adagrad(model.parameters(), lr=0.01)
 
 
     scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=90, gamma=0.1, last_epoch=-1)
+    model.train()
     for epoc in range (1, epocs+1):
         scheduler.step()
         batch_loss = []
@@ -38,11 +39,16 @@ if __name__ == '__main__':
             target = target.to(device).long()
 
             loss = model(prefix_input, sufix_input, target)
-            print(loss.item())
+
             loss.backward()
             batch_loss.append(loss.item())
             optimizer.step()
 
 
 
-        print(np.array(batch_loss).mean())
+        print('epoic:{}  loss:{}'.format(epoc,np.array(batch_loss).mean()))
+
+    torch.save({
+        'model_state_dict': model.state_dict(),
+        'optimizer_state_dict': optimizer.state_dict(),
+    }, 'check_point/check_point.pth')

@@ -51,7 +51,7 @@ class ROC_CNN(nn.Module):
         )
 
 
-        self.linear_1 = nn.Linear(8704,4096,True)
+        self.linear_1 = nn.Linear(15360,4096,True)
         self.linear_2 = nn.Linear(4096, 2, True)
 
 
@@ -60,16 +60,19 @@ class ROC_CNN(nn.Module):
         batch_size = prefix.shape[0]
         conv1_prefix = F.max_pool1d(self.conv1_prefix(prefix),2)
         conv2_prefix = F.max_pool1d(self.conv2_prefix(conv1_prefix),2)
-        conv3_prefix = F.max_pool1d(self.conv3_prefix(conv2_prefix),2)
+        # conv3_prefix = F.max_pool1d(self.conv3_prefix(conv2_prefix),2)
 
         conv1_suffix = F.max_pool1d(self.conv1_sufix(suffix),2)
-        conv2_suffix = F.max_pool1d(self.conv2_sufix(conv1_suffix),2)
+        # conv2_suffix = F.max_pool1d(self.conv2_sufix(conv1_suffix),2)
 
-        conv3_prefix_linear = conv3_prefix.view(batch_size,-1)
-        conv2_suffix_linear = conv2_suffix.view(batch_size,-1)
+        # conv3_prefix_linear = conv3_prefix.view(batch_size, -1)
+        # conv2_suffix_linear = conv2_suffix.view(batch_size, -1)
+
+        conv3_prefix_linear = conv2_prefix.view(batch_size,-1)
+        conv2_suffix_linear = conv1_suffix.view(batch_size,-1)
         fuse_ps = torch.cat((conv3_prefix_linear,conv2_suffix_linear),dim=1)
 
-        linear_1 = self.linear_1(fuse_ps)
+        linear_1 = F.relu(self.linear_1(fuse_ps))
         linear_2 = self.linear_2(linear_1)
         if self.training:
 
