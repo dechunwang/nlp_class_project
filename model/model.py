@@ -7,7 +7,7 @@ import torchvision
 
 class Conv1d (nn.Module):
     def __init__(self, input_channels, output_channels, kernel_size, stride,same_padding, bias=True, relu=True):
-        super(Conv1d).__init__()
+        super(Conv1d, self).__init__()
         padding = int((kernel_size - 1) / 2) if same_padding else 0
         self.conv = nn.Conv1d(input_channels,output_channels,kernel_size,stride,padding,bias=bias)
         self.relu = nn.ReLU() if relu else None
@@ -20,7 +20,7 @@ class Conv1d (nn.Module):
 
 class ROC_CNN(nn.Module):
     def __init__(self, input_channels):
-        super(ROC_CNN).__init__()
+        super(ROC_CNN, self).__init__()
         self.conv1_prefix = nn.Sequential(
             Conv1d(input_channels,256,3,1,same_padding=True,bias=True,relu=True),
             Conv1d(256, 256, 3, 1, same_padding=True, bias=True, relu=True),
