@@ -114,7 +114,7 @@ class ROCloader(Dataset):
         sufix_pad = np.zeros((self.suffix_length, 300))
         sufix_pad[:sufix.shape[0], :] = sufix
 
-        label = self.storys[idx]['gt_class']
+        label = np.array(self.storys[idx]['gt_class'])
         return prefix_pad.transpose(), sufix_pad.transpose(), label
 
 
