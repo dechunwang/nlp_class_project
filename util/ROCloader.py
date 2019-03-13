@@ -13,6 +13,8 @@ import string
 
 class ROCloader(Dataset):
     def __init__(self, directory, mode):
+        self.pre_max = 0
+        self.suf_max = 0
         self.storys = []
 
         # loading pretrained 300d word2vec
@@ -37,6 +39,8 @@ class ROCloader(Dataset):
             # suffix_2 = [word for word in word_tokenize(rows[1][6]) if word not in string.punctuation]
 
             prefix = [word for word in word_tokenize(" ".join(list(rows[1][1:5]))) if word not in string.punctuation]
+            if len(prefix) > self.pre_max:
+                self.pre_max = len(prefix)
 
             for index, token in enumerate(prefix):
                 if token not in word2vec_wiki_300.vocab:
@@ -46,6 +50,8 @@ class ROCloader(Dataset):
                     print(type(prefix[index]), prefix[index].shape)
 
             suffix_1 = [word for word in word_tokenize(rows[1][5]) if word not in string.punctuation]
+            if len(suffix_1) > self.suf_max:
+                self.suf_max = len(suffix_1)
 
             for index, token in enumerate(suffix_1):
                 if token not in word2vec_wiki_300.vocab:
@@ -54,6 +60,8 @@ class ROCloader(Dataset):
                     suffix_1[index] = word2vec_wiki_300[token]
 
             suffix_2 = [word for word in word_tokenize(rows[1][6]) if word not in string.punctuation]
+            if len(suffix_2) > self.suf_max:
+                self.suf_max = len(suffix_2)
 
             for index, token in enumerate(suffix_2):
                 if token not in word2vec_wiki_300.vocab:
@@ -91,9 +99,21 @@ class ROCloader(Dataset):
         return len(self.storys)
 
     def __getitem__(self, idx):
-        pass
+        prefix = self.storys[idx]['prefix']
+        for x in range (len(prefix), self.pre_max):
+            padding = np.zeros(300)
+            prefix.append(padding)
+
+        sufix = self.storys[idx]['suffix']
+        for x in range(len(sufix), self.suf_max):
+            padding = np.zeros(300)
+            sufix.append(padding)
+
+        label = self.storys[idx]['gt_class']
+        return prefix, sufix, label
 
 
 if __name__ == '__main__':
     data= ROCloader('../dataset/','val')
-    print(len(data))
+    prifix, sufix, label = data[8]
+    print(len(prifix))
