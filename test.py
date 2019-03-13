@@ -13,17 +13,24 @@ if __name__ == '__main__':
 
     model = ROC_CNN(300).to(device)
     checkpoint = torch.load(PATH)
-    model.load_state_dict(checkpoint[0])
+    model.load_state_dict(checkpoint['model_state_dict'])
+    model.eval()
 
     correct = 0
 
-    for i, batch in dataloader:
+    for i in range(len(dataset)):
 
-        prefix, sufix, target = batch
+        prefix, sufix, target = dataset[i][0].to(device).float(),dataset[i][1].to(device).float(),dataset[i][2].to(device)
 
-        output = model(prefix, sufix, target)
+        output = model(prefix.unsqueeze(0), sufix.unsqueeze(0), target)
 
-        if (output[:,1] > th).sum() == 1:
-            correct+=1
+        predit=(output[0,1] > th).sum()
+
+        print("{} \n {} \n we predict: {}  gt: {}".format(
+            dataset.storys_raw[i]['prefix'],dataset.storys_raw[i]['suffix'],predit, target))
+
+        if target==predit:
+
+            correct += 1
 
     print(correct/len(dataloader))
