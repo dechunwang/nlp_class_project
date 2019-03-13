@@ -57,7 +57,7 @@ class ROC_CNN(nn.Module):
 
 
     def forward(self, prefix,suffix,label):
-
+        batch_size = prefix.shape[0]
         conv1_prefix = F.max_pool1d(self.conv1_prefix(prefix))
         conv2_prefix = F.max_pool1d(self.conv2_prefix(conv1_prefix))
         conv3_prefix = F.max_pool1d(self.conv3_prefix(conv2_prefix))
@@ -65,7 +65,9 @@ class ROC_CNN(nn.Module):
         conv1_suffix = F.max_pool1d(self.conv1_sufix(suffix))
         conv2_suffix = F.max_pool1d(self.conv2_sufix(conv1_suffix))
 
-        fuse_ps = torch.cat(conv3_prefix,conv2_suffix,dim=0)
+        conv3_prefix_linear = conv3_prefix.view(batch_size,-1)
+        conv2_suffix_linear = conv2_suffix.view(batch_size,-1)
+        fuse_ps = torch.cat(conv3_prefix_linear,conv2_suffix_linear,dim=0)
 
         linear_1 = self.linear_1(fuse_ps)
         linear_2 = self.linear_2(linear_1)
@@ -74,6 +76,7 @@ class ROC_CNN(nn.Module):
             return F.cross_entropy(linear_2,label)
 
         else:
+
             return F.softmax(linear_2)
 
 
