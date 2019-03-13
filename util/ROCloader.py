@@ -115,7 +115,7 @@ class ROCloader(Dataset):
         sufix_pad[:sufix.shape[0], :] = sufix
 
         label = np.array(self.storys[idx]['gt_class'])
-        return prefix_pad.transpose(), sufix_pad.transpose(), label
+        return torch.from_numpy(prefix_pad.transpose()), torch.from_numpy(sufix_pad.transpose()), torch.from_numpy(label)
 
 
 if __name__ == '__main__':
