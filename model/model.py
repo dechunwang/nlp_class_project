@@ -22,7 +22,7 @@ class ROC_CNN(nn.Module):
     def __init__(self, input_channels):
         super(ROC_CNN, self).__init__()
         self.conv1_prefix = nn.Sequential(
-            Conv1d(input_channels, 256, 3, 1, same_padding=True, bias=True, relu=True),
+            Conv1d(input_channels,256,3,1,same_padding=True,bias=True,relu=True),
             Conv1d(256, 256, 3, 1, same_padding=True, bias=True, relu=True),
             Conv1d(256, 256, 3, 1, same_padding=True, bias=True, relu=True),
         )
@@ -33,49 +33,50 @@ class ROC_CNN(nn.Module):
             Conv1d(512, 512, 3, 1, same_padding=True, bias=True, relu=True),
         )
 
-        # self.conv3_prefix = nn.Sequential(
-        #     Conv1d(512, 512, 3, 1, same_padding=True, bias=True, relu=True),
-        #     Conv1d(512, 512, 3, 1, same_padding=True, bias=True, relu=True),
-        #     Conv1d(512, 512, 3, 1, same_padding=True, bias=True, relu=True),
-        # )
+        self.conv3_prefix = nn.Sequential(
+            Conv1d(512, 512, 3, 1, same_padding=True, bias=True, relu=True),
+            Conv1d(512, 512, 3, 1, same_padding=True, bias=True, relu=True),
+            Conv1d(512, 512, 3, 1, same_padding=True, bias=True, relu=True),
+        )
 
         self.conv1_sufix = nn.Sequential(
-            Conv1d(input_channels, 256, 3, 1, same_padding=True,bias=True,relu=True),
+            Conv1d(input_channels,256,3,1,same_padding=True,bias=True,relu=True),
             Conv1d(256, 256, 3, 1, same_padding=True, bias=True, relu=True),
             Conv1d(256, 256, 3, 1, same_padding=True, bias=True, relu=True),
             )
-        # self.conv2_sufix = nn.Sequential(
-        #     Conv1d(256, 512, 3, 1, same_padding=True, bias=True, relu=True),
-        #     Conv1d(512, 512, 3, 1, same_padding=True, bias=True, relu=True),
-        #     Conv1d(512, 512, 3, 1, same_padding=True, bias=True, relu=True),
-        # )
+        self.conv2_sufix = nn.Sequential(
+            Conv1d(256, 512, 3, 1, same_padding=True, bias=True, relu=True),
+            Conv1d(512, 512, 3, 1, same_padding=True, bias=True, relu=True),
+            Conv1d(512, 512, 3, 1, same_padding=True, bias=True, relu=True),
+        )
 
 
-        self.linear_1 = nn.Linear(15360, 4096, True)
+        self.linear_1 = nn.Linear(15360,4096,True)
         self.linear_2 = nn.Linear(4096, 2, True)
 
 
 
-    def forward(self, prefix,suffix, label):
+    def forward(self, prefix,suffix,label):
         batch_size = prefix.shape[0]
-        conv1_prefix = F.max_pool1d(self.conv1_prefix(prefix), 2)
-        conv2_prefix = F.max_pool1d(self.conv2_prefix(conv1_prefix), 2)
-        #conv3_prefix = F.max_pool1d(self.conv3_prefix(conv2_prefix),2)
+        conv1_prefix = F.max_pool1d(self.conv1_prefix(prefix),2)
+        conv2_prefix = F.max_pool1d(self.conv2_prefix(conv1_prefix),2)
+        # conv3_prefix = F.max_pool1d(self.conv3_prefix(conv2_prefix),2)
 
-        conv1_suffix = F.max_pool1d(self.conv1_sufix(suffix), 2)
-        #conv2_suffix = F.max_pool1d(self.conv2_sufix(conv1_suffix),2)
+        conv1_suffix = F.max_pool1d(self.conv1_sufix(suffix),2)
+        # conv2_suffix = F.max_pool1d(self.conv2_sufix(conv1_suffix),2)
 
-        #conv3_prefix_linear = conv3_prefix.view(batch_size,-1)
-        conv2_prefix_linear = conv2_prefix.view(batch_size, -1)
-        #conv2_suffix_linear = conv2_suffix.view(batch_size,-1)
-        conv1_suffix_linear = conv1_suffix.view(batch_size, -1)
-        fuse_ps = torch.cat((conv2_prefix_linear, conv1_suffix_linear), dim=1)
+        # conv3_prefix_linear = conv3_prefix.view(batch_size, -1)
+        # conv2_suffix_linear = conv2_suffix.view(batch_size, -1)
 
-        linear_1 = self.linear_1(fuse_ps)
+        conv3_prefix_linear = conv2_prefix.view(batch_size,-1)
+        conv2_suffix_linear = conv1_suffix.view(batch_size,-1)
+        fuse_ps = torch.cat((conv3_prefix_linear,conv2_suffix_linear),dim=1)
+
+        linear_1 = F.relu(self.linear_1(fuse_ps))
         linear_2 = self.linear_2(linear_1)
         if self.training:
 
-            return F.cross_entropy(linear_2, label)
+            return F.cross_entropy(linear_2,label)
 
         else:
 
