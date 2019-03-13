@@ -14,7 +14,7 @@ if __name__ == '__main__':
     model = ROC_CNN(300).to(device)
 
 
-    dataset = ROCloader()
+    dataset = ROCloader('dataset/','val',100,20)
     dataloader = torch.utils.data.DataLoader(dataset, batch_size=batch_size, shuffle=True,  num_workers=4)
 
 

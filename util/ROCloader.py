@@ -13,14 +13,14 @@ import string
 
 
 class ROCloader(Dataset):
-    def __init__(self, directory, mode,prefix_length, suffix_length):
+    def __init__(self, directory, mode, prefix_length, suffix_length):
 
         self.prefix_length = prefix_length
         self.suffix_length = suffix_length
         self.storys = []
 
 
-        w_2_c_path ='../dataset/wiki-news-300d-1M.vec'
+        w_2_c_path =os.path.join(directory, 'wiki-news-300d-1M.vec')
         # loading pretrained 300d word2vec
         if os.path.isfile(os.path.splitext(w_2_c_path)[0]+'.cache'):
             with open(os.path.splitext(w_2_c_path)[0] + '.cache', 'rb') as f:
