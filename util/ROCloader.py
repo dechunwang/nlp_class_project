@@ -50,6 +50,8 @@ class ROCloader(Dataset):
 
             prefix = [word for word in word_tokenize(" ".join(list(rows[1][1:5]))) if word not in string.punctuation]
 
+            print(prefix)
+
             for index, token in enumerate(prefix):
                 if token not in word2vec_wiki_300.vocab:
                     prefix[index] = np.zeros(300)
