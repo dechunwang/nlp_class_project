@@ -20,7 +20,7 @@ if __name__ == '__main__':
     print('Total: {}'.format(len(dataset)))
 
     #criterion = torch.nn.CrossEntropyLoss().cuda()
-    # optimizer = torch.optim.SGD(model.parameters(), lr=0.1)
+    # optimizer = torch.optim.SGD(model.parameters(),momentum=0.9, lr=0.01)
     optimizer = torch.optim.Adagrad(model.parameters(), lr=0.01)
 
 

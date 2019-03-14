@@ -18,6 +18,7 @@ class ROCloader(Dataset):
         self.prefix_length = prefix_length
         self.suffix_length = suffix_length
         self.storys = []
+        self.storys_raw =[]
 
 
         w_2_c_path =os.path.join(directory, 'wiki-news-300d-1M.vec')
@@ -50,57 +51,81 @@ class ROCloader(Dataset):
 
             prefix = [word for word in word_tokenize(" ".join(list(rows[1][1:5]))) if word not in string.punctuation]
 
-            print(prefix)
-
-            for index, token in enumerate(prefix):
-                if token not in word2vec_wiki_300.vocab:
-                    prefix[index] = np.zeros(300)
-                else:
-                    prefix[index] = word2vec_wiki_300[token]
-                    # print(type(prefix[index]), prefix[index].shape)
+            # for index, token in enumerate(prefix):
+            #     if token not in word2vec_wiki_300.vocab:
+            #         prefix[index] = np.zeros(300)
+            #     else:
+            #         prefix[index] = word2vec_wiki_300[token]
+            #         # print(type(prefix[index]), prefix[index].shape)
 
             suffix_1 = [word for word in word_tokenize(rows[1][5]) if word not in string.punctuation]
 
-            for index, token in enumerate(suffix_1):
-                if token not in word2vec_wiki_300.vocab:
-                    suffix_1[index] = np.zeros(300)
-                else:
-                    suffix_1[index] = word2vec_wiki_300[token]
+            # for index, token in enumerate(suffix_1):
+            #     if token not in word2vec_wiki_300.vocab:
+            #         suffix_1[index] = np.zeros(300)
+            #     else:
+            #         suffix_1[index] = word2vec_wiki_300[token]
 
             suffix_2 = [word for word in word_tokenize(rows[1][6]) if word not in string.punctuation]
 
 
-            for index, token in enumerate(suffix_2):
-                if token not in word2vec_wiki_300.vocab:
-                    suffix_2[index] = np.zeros(300)
-                else:
-                    suffix_2[index] = word2vec_wiki_300[token]
+            # for index, token in enumerate(suffix_2):
+            #     if token not in word2vec_wiki_300.vocab:
+            #         suffix_2[index] = np.zeros(300)
+            #     else:
+            #         suffix_2[index] = word2vec_wiki_300[token]
 
             ending_class = rows[1][7]
 
-            pos_sample['prefix'] = prefix
-            neg_sample['prefix'] = prefix
+            pos_sample['prefix'] = " ".join(list(rows[1][1:5]))
+            neg_sample['prefix'] = " ".join(list(rows[1][1:5]))
             if ending_class == 1 :
-                pos_sample['suffix'] = suffix_1
+                pos_sample['suffix'] = rows[1][5]
                 pos_sample['gt_class'] = 1
 
-                neg_sample['suffix'] = suffix_2
+                neg_sample['suffix'] = rows[1][6]
                 neg_sample['gt_class'] = 0
             else:
-                pos_sample['suffix'] = suffix_2
+                pos_sample['suffix'] = rows[1][6]
                 pos_sample['gt_class'] = 1
 
-                neg_sample['suffix'] = suffix_1
+                neg_sample['suffix'] = rows[1][5]
                 neg_sample['gt_class'] = 0
 
+            self.storys_raw.append(pos_sample)
+            self.storys_raw.append(neg_sample)
+
+            pos_sample=pos_sample.copy()
+            neg_sample=neg_sample.copy()
+            pos_sample['prefix'] = self.token_to_embed(prefix,word2vec_wiki_300)
+            neg_sample['prefix'] = self.token_to_embed(prefix,word2vec_wiki_300)
+            if ending_class == 1:
+                pos_sample['suffix'] = self.token_to_embed(suffix_1,word2vec_wiki_300)
+                pos_sample['gt_class'] = 1
+
+                neg_sample['suffix'] = self.token_to_embed(suffix_2,word2vec_wiki_300)
+                neg_sample['gt_class'] = 0
+            else:
+                pos_sample['suffix'] = self.token_to_embed(suffix_2,word2vec_wiki_300)
+                pos_sample['gt_class'] = 1
+
+                neg_sample['suffix'] = self.token_to_embed(suffix_1,word2vec_wiki_300)
+                neg_sample['gt_class'] = 0
 
             self.storys.append(pos_sample)
             self.storys.append(neg_sample)
 
 
 
+    def token_to_embed(self,tokens,word2vec_wiki_300):
+        embeded=[]
+        for token in (tokens):
+            if token not in word2vec_wiki_300.vocab:
+                embeded.append(np.zeros(300))
+            else:
+                embeded.append(word2vec_wiki_300[token])
 
-
+        return embeded;
 
     def __len__(self):
         return len(self.storys)
