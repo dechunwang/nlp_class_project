@@ -18,6 +18,7 @@ class ROCloader_train(Dataset):
         self.prefix_length = prefix_length
         self.suffix_length = suffix_length
         self.storys = []
+        self.storys_raw = []
 
 
         w_2_c_path =os.path.join(directory, 'wiki-news-300d-1M.vec')
@@ -46,20 +47,7 @@ class ROCloader_train(Dataset):
 
             prefix = [word for word in word_tokenize(" ".join(list(rows[1][2:6]))) if word not in string.punctuation]
 
-            for index, token in enumerate(prefix):
-                if token not in word2vec_wiki_300.vocab:
-                    prefix[index] = np.zeros(300)
-                else:
-                    prefix[index] = word2vec_wiki_300[token]
-                    # print(type(prefix[index]), prefix[index].shape)
-
             suffix_good = [word for word in word_tokenize(rows[1][6]) if word not in string.punctuation]
-
-            for index, token in enumerate(suffix_good):
-                if token not in word2vec_wiki_300.vocab:
-                    suffix_good[index] = np.zeros(300)
-                else:
-                    suffix_good[index] = word2vec_wiki_300[token]
 
             #pop the correct end
             story_end_neg = story_end.pop(rows[0])
@@ -67,13 +55,6 @@ class ROCloader_train(Dataset):
             suffix_bad = [word for word in word_tokenize(random.choice(story_end)) if word not in string.punctuation]
             #insert back the correct one
             story_end.insert(rows[0], story_end_neg)
-
-            for index, token in enumerate(suffix_bad):
-                if token not in word2vec_wiki_300.vocab:
-                    suffix_bad[index] = np.zeros(300)
-                else:
-                    suffix_bad[index] = word2vec_wiki_300[token]
-
 
             pos_sample['prefix'] = prefix
             neg_sample['prefix'] = prefix
@@ -84,9 +65,30 @@ class ROCloader_train(Dataset):
             neg_sample['suffix'] = suffix_bad
             neg_sample['gt_class'] = 0
 
+            self.storys_raw.append(pos_sample)
+            self.storys_raw.append(neg_sample)
 
+            pos_sample = pos_sample.copy()
+            neg_sample = neg_sample.copy()
+            pos_sample['prefix'] = self.token_to_embed(prefix, word2vec_wiki_300)
+            neg_sample['prefix'] = self.token_to_embed(prefix, word2vec_wiki_300)
+            pos_sample['suffix'] = self.token_to_embed(suffix_good, word2vec_wiki_300)
+            pos_sample['gt_class'] = 1
+            neg_sample['suffix'] = self.token_to_embed(suffix_bad, word2vec_wiki_300)
+            neg_sample['gt_class'] = 0
             self.storys.append(pos_sample)
             self.storys.append(neg_sample)
+
+    def token_to_embed(self, tokens, word2vec_wiki_300):
+
+        embeded=[]
+        for token in tokens:
+            if token not in word2vec_wiki_300.vocab:
+                embeded.append(np.zeros(300))
+            else:
+                embeded.append(word2vec_wiki_300[token])
+
+        return embeded
 
     def __len__(self):
         return len(self.storys)
