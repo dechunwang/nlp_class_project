@@ -1,4 +1,5 @@
 import torch
+
 import numpy as np
 from gensim.models import KeyedVectors
 from torch.utils.data import Dataset
@@ -107,15 +108,8 @@ class ROCloader_train(Dataset):
         label = np.array(self.storys[idx]['gt_class'])
         return torch.from_numpy(prefix_pad.transpose()), torch.from_numpy(sufix_pad.transpose()), torch.from_numpy(label)
 
-        #for check the correctness of the loader
-        # prefix = self.storys[idx]['prefix']
-        # sufix = self.storys[idx]['suffix']
-        # label = self.storys[idx]['gt_class']
-        #
-        # return prefix, sufix, label
-
 
 if __name__ == '__main__':
     data = ROCloader_train('../dataset/',  100, 20)
-    prifix, sufix, label = data[9]
+    prifix, sufix, label = data[10]
     print(prifix, '\n', sufix, '\n', label)
