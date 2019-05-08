@@ -200,25 +200,22 @@ def main():
     special_tokens_ids = list(tokenizer.convert_tokens_to_ids(token) for token in special_tokens)
     model = OpenAIGPTDoubleHeadsModel.from_pretrained(args.model_name, num_special_tokens=len(special_tokens))
 
+    if args.do_eval:
+        state = model.state_dict()
+        state_dict = torch.load(args.output_dir + 'lmxl3.pth')
+        # create new OrderedDict that does not contain `module.`
+        from collections import OrderedDict
+        new_state_dict = OrderedDict()
+        for k, v in state_dict['model_state_dict'].items():
+            name = k[7:]  # remove `module.`
+            new_state_dict[name] = v
+        # load params
 
-    state = model.state_dict()
-    state_dict = torch.load(args.output_dir + 'lmxl3.pth')
-    # create new OrderedDict that does not contain `module.`
-    from collections import OrderedDict
-    new_state_dict = OrderedDict()
-    for k, v in state_dict['model_state_dict'].items():
-        name = k[7:]  # remove `module.`
-        new_state_dict[name] = v
-    # load params
+        for k, v in new_state_dict.items():
+            if k in state:
+                state[k]=v
 
-    #state_wo_classifier = {k: v for k, v in new_state_dict.items() if k in state}
-    for k, v in new_state_dict.items():
-        if k in state:
-            state[k]=v
-    #state.update(state_wo_classifier)
-
-    model.load_state_dict(state)
-
+        model.load_state_dict(state)
 
     model.to(device)
 
@@ -237,8 +234,12 @@ def main():
             return obj
         return list(tokenize_and_encode(o) for o in obj)
     logger.info("Encoding dataset...")
-    train_dataset = load_rocstories_dataset(args.train_dataset)
-    eval_dataset = load_rocstories_dataset(args.eval_dataset)
+    if args.do_eval:
+        train_dataset = load_rocstories_dataset(args.train_dataset)
+        eval_dataset = load_rocstories_dataset(args.eval_dataset)
+    else:
+        train_dataset = load_rocstories_dataset_wo_neg(args.train_dataset)
+        #eval_dataset = load_rocstories_dataset(args.eval_dataset)
 
 
     if args.do_eval:
@@ -246,19 +247,22 @@ def main():
     else:
         datasets = train_dataset
 
-    # if os.path.isfile('encode_dataset.cache'):
-    #     if len(datasets) != 2:
-    #         with open('encode_dataset.cache', 'rb') as f:
-    #             encoded_datasets = pickle.load(f)
-    # else:
-    #     encoded_datasets = tokenize_and_encode(datasets)
-    #
-    # if not args.do_eval and not os.path.isfile('encode_dataset.cache'):
-    #     with open('encode_dataset.cache', 'wb') as g:
-    #         pickle.dump(encoded_datasets, g, pickle.HIGHEST_PROTOCOL)
+    if os.path.isfile('encode_dataset.cache'):
+        if not args.do_eval:
+            with open('encode_dataset.cache', 'rb') as f:
+                encoded_datasets = pickle.load(f)
+        else:
+            encoded_datasets = tokenize_and_encode(datasets) #for encoding valdation set
 
-    datasets = (train_dataset, eval_dataset)
-    encoded_datasets = tokenize_and_encode(datasets)
+    else:
+        encoded_datasets = tokenize_and_encode(datasets) # for encoding training set
+
+    if not args.do_eval and not os.path.isfile('encode_dataset.cache'):
+        with open('encode_dataset.cache', 'wb') as g:
+            pickle.dump(encoded_datasets, g, pickle.HIGHEST_PROTOCOL)
+
+    # datasets = (train_dataset, eval_dataset)
+    # encoded_datasets = tokenize_and_encode(datasets)
 
 
     # Compute the max input length for the Transformer
@@ -267,20 +271,19 @@ def main():
         input_length = max(len(story[:max_length]) + max(len(cont1[:max_length]), len(cont2[:max_length])) + 3  \
                             for dataset in encoded_datasets for story, cont1, cont2, _ in dataset)
     else:
-        # input_length = max(len(story[:max_length]) + max(len(cont1[:max_length])) + 3 \
-        #                    for story, cont1 in encoded_datasets)
         input_length = 0
         for story, cont1 in encoded_datasets:
             input_length = max(input_length, len(story[:max_length])+len(cont1[:max_length])+3)
     input_length = min(input_length, model.config.n_positions)  # Max size of input for the pre-trained model
 
     # Prepare inputs tensors and dataloaders
-    tensor_datasets = pre_process_datasets(encoded_datasets, input_length, max_length, *special_tokens_ids)
-
     if args.do_eval:
+        tensor_datasets = pre_process_datasets(encoded_datasets, input_length, max_length, *special_tokens_ids)
         train_tensor_dataset, eval_tensor_dataset = tensor_datasets[0], tensor_datasets[1]
     else:
+        tensor_datasets = pre_process_datasets_wo_neg(encoded_datasets, input_length, max_length, *special_tokens_ids)
         train_tensor_dataset = tensor_datasets[0]
+
 
     train_data = TensorDataset(*train_tensor_dataset)
     train_sampler = RandomSampler(train_data)
@@ -319,12 +322,16 @@ def main():
             tqdm_bar = tqdm(train_dataloader, desc="Training")
             for step, batch in enumerate(tqdm_bar):
                 batch = tuple(t.to(device) for t in batch)
-                input_ids, mc_token_ids, lm_labels, mc_labels = batch
-                #input_ids,  lm_labels = batch
-                #losses = model(input_ids=input_ids, lm_labels=lm_labels)
-                losses = model(input_ids=input_ids, mc_token_ids = mc_token_ids, lm_labels=lm_labels, mc_labels=mc_labels)
-                #loss = loss[0]
-                loss = args.lm_coef * losses[0] + losses[1]
+
+                if args.do_eval:
+                    input_ids, mc_token_ids, lm_labels, mc_labels = batch
+                    losses = model(input_ids=input_ids, mc_token_ids = mc_token_ids, lm_labels=lm_labels, mc_labels=mc_labels)
+                    loss = args.lm_coef * losses[0] + losses[1]
+                else:
+                    input_ids, lm_labels = batch
+                    losses = model(input_ids=input_ids, lm_labels=lm_labels)
+                    loss = losses[0]
+
                 loss = loss.mean()
                 loss.backward()
                 optimizer.step()
@@ -334,12 +341,12 @@ def main():
                 nb_tr_steps += 1
                 tqdm_bar.desc = "Training loss: {:.2e} lr: {:.2e}".format(exp_average_loss, optimizer.get_lr()[0])
 
-            # torch.save({
-            #     'model_state_dict': model.state_dict()
-            # }, args.output_dir + 'lmxl{}.pth'.format(ep))
-            # ep = ep+1
+            if not args.do_eval:
+                torch.save({
+                    'model_state_dict': model.state_dict()
+                }, args.output_dir + 'lmxl{}.pth'.format(ep))
+                ep = ep+1
 
-        #ep = ep + 1
     # Save a trained model
     if args.do_train:
         # Save a trained model, configuration and tokenizer
