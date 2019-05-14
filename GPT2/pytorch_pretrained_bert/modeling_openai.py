@@ -592,6 +592,7 @@ class OpenAIGPTModel(OpenAIGPTPreTrainedModel):
 
     def __init__(self, config):
         super(OpenAIGPTModel, self).__init__(config)
+        print(config)
         num_tokens = config.vocab_size + config.n_special
         self.tokens_embed = nn.Embedding(num_tokens, config.n_embd)
         self.positions_embed = nn.Embedding(config.n_positions, config.n_embd)
@@ -607,6 +608,7 @@ class OpenAIGPTModel(OpenAIGPTPreTrainedModel):
         if self.config.n_special == num_special_tokens:
             return
         # Update config
+        print("dsdsdsds")
         self.config.n_special = num_special_tokens
         # Build new embeddings and initialize all new embeddings (in particular the special tokens)
         old_embed = self.tokens_embed
@@ -703,6 +705,7 @@ class OpenAIGPTLMHeadModel(OpenAIGPTPreTrainedModel):
 
     def __init__(self, config):
         super(OpenAIGPTLMHeadModel, self).__init__(config)
+        print(config)
         self.transformer = OpenAIGPTModel(config)
         self.lm_head = OpenAIGPTLMHead(self.transformer.tokens_embed.weight, config)
         self.apply(self.init_weights)
@@ -792,6 +795,7 @@ class OpenAIGPTDoubleHeadsModel(OpenAIGPTPreTrainedModel):
 
     def __init__(self, config):
         super(OpenAIGPTDoubleHeadsModel, self).__init__(config)
+        print(config)
         self.transformer = OpenAIGPTModel(config)
         self.lm_head = OpenAIGPTLMHead(self.transformer.tokens_embed.weight, config)
         self.multiple_choice_head = OpenAIGPTMultipleChoiceHead(config)
@@ -813,7 +817,7 @@ class OpenAIGPTDoubleHeadsModel(OpenAIGPTPreTrainedModel):
             shift_logits = lm_logits[..., :-1, :].contiguous()
             shift_labels = lm_labels[..., 1:].contiguous()
             loss_fct = CrossEntropyLoss(ignore_index=-1)
-            #losses.append(loss_fct(shift_logits.view(-1, shift_logits.size(-1)), shift_labels.view(-1)))
+            losses.append(loss_fct(shift_logits.view(-1, shift_logits.size(-1)), shift_labels.view(-1)))
         if mc_labels is not None:
             loss_fct = CrossEntropyLoss()
             losses.append(loss_fct(mc_logits.view(-1, mc_logits.size(-1)), mc_labels.view(-1)))
@@ -821,3 +825,4 @@ class OpenAIGPTDoubleHeadsModel(OpenAIGPTPreTrainedModel):
             return losses
         return lm_logits, mc_logits
         #return lm_logits
+        #return mc_logits

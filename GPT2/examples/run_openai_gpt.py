@@ -202,7 +202,7 @@ def main():
 
     if args.do_eval:
         state = model.state_dict()
-        state_dict = torch.load(args.output_dir + 'lmxl3.pth')
+        state_dict = torch.load(args.output_dir + 'lmxl5.pth')
         # create new OrderedDict that does not contain `module.`
         from collections import OrderedDict
         new_state_dict = OrderedDict()
@@ -327,6 +327,7 @@ def main():
                     input_ids, mc_token_ids, lm_labels, mc_labels = batch
                     losses = model(input_ids=input_ids, mc_token_ids = mc_token_ids, lm_labels=lm_labels, mc_labels=mc_labels)
                     loss = args.lm_coef * losses[0] + losses[1]
+                    #loss = losses[0]
                 else:
                     input_ids, lm_labels = batch
                     losses = model(input_ids=input_ids, lm_labels=lm_labels)

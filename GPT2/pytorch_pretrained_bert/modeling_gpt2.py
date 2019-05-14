@@ -106,7 +106,7 @@ class GPT2Config(object):
 
     def __init__(
         self,
-        vocab_size_or_config_json_file=50257,
+        vocab_size_or_config_json_file=40478,
         n_positions=1024,
         n_ctx=1024,
         n_embd=768,
@@ -363,7 +363,7 @@ class GPT2PreTrainedModel(nn.Module):
 
     @classmethod
     def from_pretrained(
-        cls, pretrained_model_name_or_path, state_dict=None, cache_dir=None, from_tf=False, *inputs, **kwargs
+        cls, pretrained_model_name_or_path,state_dict=None, cache_dir=None, from_tf=False, *inputs, **kwargs
     ):
         """
         Instantiate a GPT2PreTrainedModel from a pre-trained model file or a pytorch state dict.
@@ -529,6 +529,21 @@ class GPT2Model(GPT2PreTrainedModel):
 
         self.apply(self.init_weights)
 
+
+    def set_num_special_tokens(self):
+        " Update input embeddings with new embedding matrice if needed "
+        # if self.config.n_special == num_special_tokens:
+        #     return
+        # Update config
+        # self.config.n_special = num_special_tokens
+        # Build new embeddings and initialize all new embeddings (in particular the special tokens)
+        old_embed = self.wte
+        self.wte = nn.Embedding(self.config.vocab_size+3, self.config.n_embd)
+        self.wte.to(old_embed.weight.device)
+        self.init_weights(self.wte)
+        # Copy word embeddings from the previous weights
+        self.wte.weight.data[:self.config.vocab_size, :] = old_embed.weight.data[:self.config.vocab_size, :]
+
     def forward(self, input_ids, position_ids=None, token_type_ids=None, past=None):
         if past is None:
             past_length = 0
@@ -690,12 +705,14 @@ class GPT2DoubleHeadsModel(GPT2PreTrainedModel):
     def set_tied(self):
         """ Make sure we are sharing the embeddings
         """
+        self.transformer.set_num_special_tokens()
         self.lm_head.set_embeddings_weights(self.transformer.wte.weight)
 
-    def forward(self, input_ids, mc_token_ids, lm_labels=None, mc_labels=None, token_type_ids=None, position_ids=None, past=None):
+    def forward(self, input_ids, mc_token_ids=None, lm_labels=None, mc_labels=None, token_type_ids=None, position_ids=None, past=None, eval=True):
         hidden_states, presents = self.transformer(input_ids, position_ids, token_type_ids, past)
         lm_logits = self.lm_head(hidden_states)
-        mc_logits = self.multiple_choice_head(hidden_states, mc_token_ids)
+        if eval:
+            mc_logits = self.multiple_choice_head(hidden_states, mc_token_ids)
         losses = []
         if lm_labels is not None:
             shift_logits = lm_logits[:, :-1].contiguous()
@@ -705,7 +722,8 @@ class GPT2DoubleHeadsModel(GPT2PreTrainedModel):
                           shift_logits.size(-1)), shift_labels.view(-1)))
         if mc_labels is not None:
             loss_fct = CrossEntropyLoss()
-            losses.append(loss_fct(mc_logits.view(-1, mc_logits.size(-1)), mc_labels.view(-1)))
+            if eval:
+                losses.append(loss_fct(mc_logits.view(-1, mc_logits.size(-1)), mc_labels.view(-1)))
         if losses:
             return losses
-        return lm_logits, mc_logits, presents
+        return lm_logits, mc_logits

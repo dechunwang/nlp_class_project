@@ -48,20 +48,14 @@ class SwagExample(object):
     def __init__(self,
                  swag_id,
                  context_sentence,
-                 start_ending,
                  ending_0,
                  ending_1,
-                 ending_2,
-                 ending_3,
                  label = None):
         self.swag_id = swag_id
         self.context_sentence = context_sentence
-        self.start_ending = start_ending
         self.endings = [
             ending_0,
-            ending_1,
-            ending_2,
-            ending_3,
+            ending_1
         ]
         self.label = label
 
@@ -72,11 +66,8 @@ class SwagExample(object):
         l = [
             "swag_id: {}".format(self.swag_id),
             "context_sentence: {}".format(self.context_sentence),
-            "start_ending: {}".format(self.start_ending),
             "ending_0: {}".format(self.endings[0]),
             "ending_1: {}".format(self.endings[1]),
-            "ending_2: {}".format(self.endings[2]),
-            "ending_3: {}".format(self.endings[3]),
         ]
 
         if self.label is not None:
@@ -109,27 +100,25 @@ def read_swag_examples(input_file, is_training):
         reader = csv.reader(f)
         lines = []
         for line in reader:
-            if sys.version_info[0] == 2:
-                line = list(unicode(cell, 'utf-8') for cell in line)
+            # if sys.version_info[0] == 2:
+            #     line = list(unicode(cell, 'utf-8') for cell in line)
             lines.append(line)
 
-    if is_training and lines[0][-1] != 'label':
+    if is_training and lines[0][-1] != 'AnswerRightEnding':
         raise ValueError(
             "For training, the input file must contain a label column."
         )
 
     examples = [
         SwagExample(
-            swag_id = line[2],
-            context_sentence = line[4],
-            start_ending = line[5], # in the swag dataset, the
+            swag_id = line[0],
+            context_sentence = line[1:4],
+            #start_ending = line[1], # in the swag dataset, the
                                          # common beginning of each
                                          # choice is stored in "sent2".
-            ending_0 = line[7],
-            ending_1 = line[8],
-            ending_2 = line[9],
-            ending_3 = line[10],
-            label = int(line[11]) if is_training else None
+            ending_0 = line[5],
+            ending_1 = line[6],
+            label = int(line[7]) if is_training else None
         ) for line in lines[1:] # we skip the line with the column names
     ]
 
@@ -247,18 +236,16 @@ def main():
 
     ## Required parameters
     parser.add_argument("--data_dir",
-                        default=None,
+                        default='/home/chenxi/Desktop/roc/train/',
                         type=str,
-                        required=True,
                         help="The input data dir. Should contain the .csv files (or other data files) for the task.")
-    parser.add_argument("--bert_model", default=None, type=str, required=True,
+    parser.add_argument("--bert_model", default='bert-base-uncased', type=str,
                         help="Bert pre-trained model selected in the list: bert-base-uncased, "
                         "bert-large-uncased, bert-base-cased, bert-large-cased, bert-base-multilingual-uncased, "
                         "bert-base-multilingual-cased, bert-base-chinese.")
     parser.add_argument("--output_dir",
-                        default=None,
+                        default='./log-bert/',
                         type=str,
-                        required=True,
                         help="The output directory where the model checkpoints will be written.")
 
     ## Other parameters
@@ -270,10 +257,12 @@ def main():
                              "than this will be padded.")
     parser.add_argument("--do_train",
                         action='store_true',
-                        help="Whether to run training.")
+                        help="Whether to run training.",
+                        default=True)
     parser.add_argument("--do_eval",
                         action='store_true',
-                        help="Whether to run eval on the dev set.")
+                        help="Whether to run eval on the dev set.",
+                        default=False)
     parser.add_argument("--do_lower_case",
                         action='store_true',
                         help="Set this flag if you are using an uncased model.")
