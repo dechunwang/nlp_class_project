@@ -1,9 +1,11 @@
 __pycache__
 .idea/
-dataset/wiki-news-300d-1M.vec
+dataset/
 GPT2/log/
 GPT2/log_gpt2/
 storyset_raw.cache
 storyset_test_raw.cache
 GPT2/example/encode_dataset.cache
 GPT2/example/encode_dataset_gpt2.cache
+check_point/
+util/storyset_raw.cache
